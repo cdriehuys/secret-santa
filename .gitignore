@@ -1,0 +1,5 @@
+# Debug binaries
+__debug*
+
+# Scratch files for local testing
+scratch.http

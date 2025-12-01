@@ -10,6 +10,7 @@ import (
 
 	"github.com/cdriehuys/secret-santa/internal/application"
 	"github.com/cdriehuys/secret-santa/internal/pairings"
+	"github.com/cdriehuys/secret-santa/internal/templating"
 )
 
 func main() {
@@ -26,9 +27,12 @@ func main() {
 		return graph.Pairings(r)
 	}
 
+	templates := templating.LiveLoader{Logger: logger, BaseDir: "./ui/templates"}
+
 	app := application.Application{
 		Logger:           logger,
 		PairingGenerator: pairingGenerator,
+		Templates:        &templates,
 	}
 
 	s := http.Server{

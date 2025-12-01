@@ -1,0 +1,11 @@
+{{ define "content" }}
+<h1>Generate Pairings</h1>
+<form method="post" action="/pairings">
+    {{range 5}}
+    <label for="name-{{.}}">Name {{.}}:</label>
+    <input id="name-{{.}}" name="name[{{.}}]">
+    <br>
+    {{ end }}
+    <button type="submit">Submit</button>
+</form>
+{{ end }}

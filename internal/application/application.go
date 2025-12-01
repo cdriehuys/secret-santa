@@ -2,6 +2,7 @@ package application
 
 import (
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 
@@ -14,19 +15,35 @@ const MaxExclusions = 3
 type GiftRestrictions map[string][]string
 
 type pairingGenerator func(GiftRestrictions) ([]pairings.Pairing, error)
+type templateEngine interface {
+	Render(io.Writer, string, any) error
+}
 
 type Application struct {
 	Logger *slog.Logger
 
 	PairingGenerator pairingGenerator
+	Templates        templateEngine
 }
 
 func (s *Application) Routes() http.Handler {
 	mux := http.NewServeMux()
 
+	mux.HandleFunc("GET /pairings", s.pairingsGet)
 	mux.HandleFunc("POST /pairings", s.pairingsPost)
 
 	return mux
+}
+
+func (a *Application) render(w http.ResponseWriter, r *http.Request, page string) {
+	if err := a.Templates.Render(w, page, nil); err != nil {
+		a.Logger.Error("Failed to render page.", "page", page, "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+}
+
+func (a *Application) pairingsGet(w http.ResponseWriter, r *http.Request) {
+	a.render(w, r, "pairings.html")
 }
 
 func (s *Application) pairingsPost(w http.ResponseWriter, r *http.Request) {

@@ -15,7 +15,7 @@ const MaxExclusions = 3
 type GiftRestrictions map[string][]string
 
 type pairingGenerator func(GiftRestrictions) ([]pairings.Pairing, error)
-type templateEngine interface {
+type TemplateEngine interface {
 	Render(io.Writer, string, any) error
 }
 
@@ -23,7 +23,7 @@ type Application struct {
 	Logger *slog.Logger
 
 	PairingGenerator pairingGenerator
-	Templates        templateEngine
+	Templates        TemplateEngine
 }
 
 func (s *Application) Routes() http.Handler {

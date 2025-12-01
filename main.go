@@ -2,6 +2,8 @@ package main
 
 import (
 	"errors"
+	"flag"
+	"io/fs"
 	"log/slog"
 	"math/rand"
 	"net/http"
@@ -11,9 +13,17 @@ import (
 	"github.com/cdriehuys/secret-santa/internal/application"
 	"github.com/cdriehuys/secret-santa/internal/pairings"
 	"github.com/cdriehuys/secret-santa/internal/templating"
+	"github.com/cdriehuys/secret-santa/ui"
+)
+
+var (
+	liveTemplatePath string
 )
 
 func main() {
+	flag.StringVar(&liveTemplatePath, "live-templates", "", "load templates from this path on each request instead of using the embedded templates")
+	flag.Parse()
+
 	logger := slog.New(
 		slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
 			Level: slog.LevelInfo,
@@ -27,12 +37,25 @@ func main() {
 		return graph.Pairings(r)
 	}
 
-	templates := templating.LiveLoader{Logger: logger, BaseDir: "./ui/templates"}
+	var templates application.TemplateEngine
+	if liveTemplatePath != "" {
+		templates = &templating.LiveLoader{Logger: logger, BaseDir: liveTemplatePath}
+	} else {
+		templateFS, err := fs.Sub(ui.FS, "templates")
+		if err != nil {
+			panic(err)
+		}
+
+		templates, err = templating.NewTemplateCache(logger, templateFS)
+		if err != nil {
+			panic(err)
+		}
+	}
 
 	app := application.Application{
 		Logger:           logger,
 		PairingGenerator: pairingGenerator,
-		Templates:        &templates,
+		Templates:        templates,
 	}
 
 	s := http.Server{

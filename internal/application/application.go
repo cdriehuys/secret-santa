@@ -1,11 +1,13 @@
 package application
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 
+	"github.com/cdriehuys/secret-santa/internal/models"
 	"github.com/cdriehuys/secret-santa/internal/pairings"
 )
 
@@ -19,31 +21,52 @@ type TemplateEngine interface {
 	Render(io.Writer, string, any) error
 }
 
+type UserModel interface {
+	Register(context.Context, models.NewUser) error
+}
+
+type TemplateData struct {
+	IsAuthenticated bool
+}
+
 type Application struct {
 	Logger *slog.Logger
 
 	PairingGenerator pairingGenerator
 	Templates        TemplateEngine
+
+	Users UserModel
 }
 
 func (s *Application) Routes() http.Handler {
 	mux := http.NewServeMux()
 
+	mux.HandleFunc("GET /{$}", s.homeGet)
 	mux.HandleFunc("GET /pairings", s.pairingsGet)
 	mux.HandleFunc("POST /pairings", s.pairingsPost)
+	mux.HandleFunc("GET /register", s.registerGet)
+	mux.HandleFunc("POST /register", s.registerPost)
 
 	return mux
 }
 
-func (a *Application) render(w http.ResponseWriter, r *http.Request, page string) {
-	if err := a.Templates.Render(w, page, nil); err != nil {
+func (a *Application) templateData(r *http.Request) TemplateData {
+	return TemplateData{}
+}
+
+func (a *Application) render(w http.ResponseWriter, r *http.Request, page string, data TemplateData) {
+	if err := a.Templates.Render(w, page, data); err != nil {
 		a.Logger.Error("Failed to render page.", "page", page, "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 	}
 }
 
+func (a *Application) homeGet(w http.ResponseWriter, r *http.Request) {
+	a.render(w, r, "home.html", a.templateData(r))
+}
+
 func (a *Application) pairingsGet(w http.ResponseWriter, r *http.Request) {
-	a.render(w, r, "pairings.html")
+	a.render(w, r, "pairings.html", a.templateData(r))
 }
 
 func (s *Application) pairingsPost(w http.ResponseWriter, r *http.Request) {

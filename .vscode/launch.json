@@ -9,7 +9,11 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceFolder}"
+            "program": "${workspaceFolder}",
+            "args": ["-live-templates", "./ui/templates"],
+            "env": {
+                "DB_CONN": "postgres://${env:POSTGRES_USER}:${env:POSTGRES_PASSWORD}@${env:POSTGRES_HOSTNAME}/${env:POSTGRES_DB}"
+            }
         }
     ]
 }

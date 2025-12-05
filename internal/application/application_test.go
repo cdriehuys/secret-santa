@@ -12,6 +12,21 @@ import (
 	"github.com/cdriehuys/secret-santa/internal/pairings"
 )
 
+func TestApplication_homeGet(t *testing.T) {
+	app := testutils.NewTestApplication(t)
+	ts := testutils.NewTestServer(t, app.Routes())
+	defer ts.Close()
+
+	res := ts.Get(t, "")
+	if res.Status != http.StatusOK {
+		t.Errorf("Expected status %d, got %d", http.StatusOK, res.Status)
+	}
+
+	if res.Body == "" {
+		t.Error("Expected non-empty body.")
+	}
+}
+
 func TestApplication_pairingsPost(t *testing.T) {
 	names := []string{"Bob", "Jane"}
 	fakeGenerator := func(restrictions application.GiftRestrictions) ([]pairings.Pairing, error) {

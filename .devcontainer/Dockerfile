@@ -1,8 +1,7 @@
 FROM mcr.microsoft.com/devcontainers/go:2-1.25-trixie
 
-# [Optional] Uncomment this section to install additional OS packages.
-# RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-#     && apt-get -y install --no-install-recommends <your-package-list-here>
+RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
+    && apt-get -y install --no-install-recommends just postgresql-client-17
 
 # [Optional] Uncomment the next lines to use go get to install anything else you need
 # USER vscode

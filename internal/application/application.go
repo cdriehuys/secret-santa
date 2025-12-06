@@ -54,19 +54,27 @@ func (a *Application) templateData(r *http.Request) TemplateData {
 	return TemplateData{}
 }
 
+func (a *Application) serverError(w http.ResponseWriter, r *http.Request, message string, err error, attrs ...any) {
+	attrs = append(attrs, "error", err)
+	a.Logger.ErrorContext(r.Context(), message, attrs...)
+
+	w.WriteHeader(http.StatusInternalServerError)
+}
+
 func (a *Application) render(w http.ResponseWriter, r *http.Request, page string, data TemplateData) {
 	if err := a.Templates.Render(w, page, data); err != nil {
-		a.Logger.Error("Failed to render page.", "page", page, "error", err)
-		w.WriteHeader(http.StatusInternalServerError)
+		a.serverError(w, r, "Failed to render page.", err, "page", page)
 	}
 }
 
 func (a *Application) homeGet(w http.ResponseWriter, r *http.Request) {
-	a.render(w, r, "home.html", a.templateData(r))
+	var data TemplateData = a.templateData(r)
+	a.render(w, r, "home.html", data)
 }
 
 func (a *Application) pairingsGet(w http.ResponseWriter, r *http.Request) {
-	a.render(w, r, "pairings.html", a.templateData(r))
+	var data TemplateData = a.templateData(r)
+	a.render(w, r, "pairings.html", data)
 }
 
 func (s *Application) pairingsPost(w http.ResponseWriter, r *http.Request) {

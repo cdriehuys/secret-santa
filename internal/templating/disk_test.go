@@ -109,3 +109,98 @@ func TestLiveLoader_Render(t *testing.T) {
 		})
 	}
 }
+
+func TestLiveEmailLoader_Render(t *testing.T) {
+	tests := []struct {
+		name string
+
+		// setup
+		baseTemplate     string
+		subjectTemplates map[string]string
+
+		// parameters
+		subject string
+		data    any
+
+		// expectations
+		want    string
+		wantErr bool
+	}{
+		{
+			name:    "base template missing",
+			subject: "foo.txt",
+			wantErr: true,
+		},
+		{
+			name:         "missing page",
+			baseTemplate: standardBaseTemplate,
+
+			subject: "foo.txt",
+			wantErr: true,
+		},
+		{
+			name:         "single block",
+			baseTemplate: standardBaseTemplate,
+			subjectTemplates: map[string]string{
+				"hello.txt": helloTemplate,
+			},
+			subject: "hello.txt",
+			want:    helloOutput,
+		},
+		{
+			name:         "uses data",
+			baseTemplate: standardBaseTemplate,
+			subjectTemplates: map[string]string{
+				"data.txt": `{{ define "content" }}{{ .Content }}{{ end}}`,
+			},
+			subject: "data.txt",
+			data:    map[string]string{"Content": "Refrigerator"},
+			want:    "Refrigerator",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+
+			if tt.baseTemplate != "" {
+				if err := os.WriteFile(filepath.Join(dir, "base.txt"), []byte(tt.baseTemplate), 0o644); err != nil {
+					t.Fatalf("failed to create base.txt: %v", err)
+				}
+			}
+
+			if len(tt.subjectTemplates) > 0 {
+				if err := os.Mkdir(filepath.Join(dir, "subjects"), 0o755); err != nil {
+					t.Fatalf("failed to create subjects dir: %v", err)
+				}
+
+				for page, template := range tt.subjectTemplates {
+					if err := os.WriteFile(filepath.Join(dir, "subjects", page), []byte(template), 0o644); err != nil {
+						t.Fatalf("failed to write subject %q: %v", page, err)
+					}
+				}
+			}
+
+			l := templating.LiveEmailLoader{Logger: slog.New(slog.DiscardHandler), BaseDir: dir}
+
+			var buffer bytes.Buffer
+
+			gotErr := l.Render(&buffer, tt.subject, tt.data)
+			if gotErr != nil {
+				if !tt.wantErr {
+					t.Errorf("Render() failed: %v", gotErr)
+				}
+
+				return
+			}
+
+			if tt.wantErr {
+				t.Fatal("Render() succeeded unexpectedly")
+			}
+
+			got := buffer.String()
+			if got != tt.want {
+				t.Errorf("Expected %q, got %q", tt.want, got)
+			}
+		})
+	}
+}

@@ -10,7 +10,7 @@
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}",
-            "args": ["-live-templates", "./ui/templates"],
+            "args": ["-live-templates", "./ui/templates", "-live-email-templates", "./ui/emails"],
             "env": {
                 "DB_CONN": "postgres://${env:POSTGRES_USER}:${env:POSTGRES_PASSWORD}@${env:POSTGRES_HOSTNAME}/${env:POSTGRES_DB}"
             }

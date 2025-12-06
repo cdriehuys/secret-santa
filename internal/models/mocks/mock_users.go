@@ -7,11 +7,12 @@ import (
 )
 
 type UserModel struct {
+	RegisterError  error
 	RegisteredUser models.NewUser
 }
 
 func (m *UserModel) Register(_ context.Context, user models.NewUser) error {
 	m.RegisteredUser = user
 
-	return nil
+	return m.RegisterError
 }

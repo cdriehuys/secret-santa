@@ -46,6 +46,12 @@ func CaptureTemplateData() (*CapturingTemplateData, TestAppOpt) {
 	return engine, opt
 }
 
+func WithTemplateEngine(templates application.TemplateEngine) TestAppOpt {
+	return func(a *application.Application) {
+		a.Templates = templates
+	}
+}
+
 func NewTestApplication(t *testing.T, opts ...TestAppOpt) *application.Application {
 	app := &application.Application{}
 

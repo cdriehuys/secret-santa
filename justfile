@@ -2,9 +2,14 @@ default:
     just --list
 
 # Generate application code
-[group('build')]
+[group('app')]
 generate:
     go generate ./...
+
+# Run all tests
+[group('app')]
+test: generate
+    go test -v -count=1 ./...
 
 # Open a database shell
 [group('database')]

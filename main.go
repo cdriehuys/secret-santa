@@ -47,15 +47,15 @@ func main() {
 	}
 
 	var emailTemplates application.TemplateEngine
-	if liveTemplatePath != "" {
-		emailTemplates = &templating.LiveLoader{Logger: logger, BaseDir: liveEmailTemplatePath}
+	if liveEmailTemplatePath != "" {
+		emailTemplates = &templating.LiveEmailLoader{Logger: logger, BaseDir: liveEmailTemplatePath}
 	} else {
 		templateFS, err := fs.Sub(ui.EmailFS, "emails")
 		if err != nil {
 			panic(err)
 		}
 
-		emailTemplates, err = templating.NewTemplateCache(logger, templateFS)
+		emailTemplates, err = templating.NewEmailTemplateCache(logger, templateFS)
 		if err != nil {
 			panic(err)
 		}

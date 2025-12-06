@@ -46,6 +46,7 @@ func (s *Application) Routes() http.Handler {
 	mux.HandleFunc("POST /pairings", s.pairingsPost)
 	mux.HandleFunc("GET /register", s.registerGet)
 	mux.HandleFunc("POST /register", s.registerPost)
+	mux.HandleFunc("GET /register/success", s.registerSuccess)
 
 	return mux
 }

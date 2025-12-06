@@ -47,9 +47,15 @@ func (e *CapturingTemplateEngine[T]) Render(w io.Writer, name string, data any) 
 		e.RenderedData = structuredData
 	}
 
+	// Have to return error before writing, otherwise the response will automatically get a 200
+	// response.
+	if e.RenderError != nil {
+		return e.RenderError
+	}
+
 	fmt.Fprintf(w, "%#v", data)
 
-	return e.RenderError
+	return nil
 }
 
 type WantRedirect struct {
@@ -76,7 +82,7 @@ func TestApplication_registerPost(t *testing.T) {
 			email:          defaultEmail,
 			password:       defaultPassword,
 			wantRegistered: models.NewUser{Email: defaultEmail, Password: defaultPassword},
-			wantRedirect:   &WantRedirect{Status: http.StatusSeeOther, Location: "/"},
+			wantRedirect:   &WantRedirect{Status: http.StatusSeeOther, Location: "/register/success"},
 		},
 		{
 			name: "registration server error",
@@ -125,6 +131,41 @@ func TestApplication_registerPost(t *testing.T) {
 				if got := res.Headers.Get("Location"); got != want.Location {
 					t.Errorf("Expected redirect location %q, got %q", want.Location, got)
 				}
+			}
+		})
+	}
+}
+
+func TestApplication_registerSuccess(t *testing.T) {
+	testCases := []struct {
+		name       string
+		templates  CapturingTemplateEngine[application.TemplateData]
+		wantStatus int
+	}{
+		{
+			name:       "successful render",
+			wantStatus: http.StatusOK,
+		},
+		{
+			name: "render error",
+			templates: CapturingTemplateEngine[application.TemplateData]{
+				RenderError: errors.New("rendering failed"),
+			},
+			wantStatus: http.StatusInternalServerError,
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			app := testutils.NewTestApplication(t)
+			app.Templates = &tt.templates
+
+			ts := testutils.NewTestServer(t, app.Routes())
+			defer ts.Close()
+
+			res := ts.Get(t, "/register/success")
+
+			if res.Status != tt.wantStatus {
+				t.Errorf("Expected status %d, got %d", tt.wantStatus, res.Status)
 			}
 		})
 	}

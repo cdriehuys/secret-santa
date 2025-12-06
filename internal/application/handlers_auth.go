@@ -24,5 +24,9 @@ func (a *Application) registerPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+	http.Redirect(w, r, "/register/success", http.StatusSeeOther)
+}
+
+func (a *Application) registerSuccess(w http.ResponseWriter, r *http.Request) {
+	a.render(w, r, "register-success.html", a.templateData(r))
 }

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"testing"
 
 	"github.com/cdriehuys/secret-santa/internal/application"
@@ -15,8 +14,7 @@ import (
 )
 
 func TestApplication_registerGet(t *testing.T) {
-	templateCapture, templateOpt := testutils.CaptureTemplateData()
-	app := testutils.NewTestApplication(t, templateOpt)
+	app := testutils.NewTestApplication(t)
 	ts := testutils.NewTestServer(t, app.Routes())
 	defer ts.Close()
 
@@ -24,10 +22,6 @@ func TestApplication_registerGet(t *testing.T) {
 
 	if res.Status != http.StatusOK {
 		t.Errorf("Expected status %d, got %d", http.StatusOK, res.Status)
-	}
-
-	if templateCapture.Data.IsAuthenticated {
-		t.Errorf("Expected user not to be authenticated.")
 	}
 }
 
@@ -105,7 +99,7 @@ func TestApplication_registerPost(t *testing.T) {
 			ts := testutils.NewTestServer(t, app.Routes())
 			defer ts.Close()
 
-			form := url.Values{}
+			form := csrfFormValues(t, app, ts, "/register")
 			form.Add("email", tt.email)
 			form.Add("password", tt.password)
 

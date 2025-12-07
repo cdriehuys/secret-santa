@@ -2,11 +2,11 @@ package testutils
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"io/fs"
 	"log/slog"
 	"net/http"
+	"net/http/cookiejar"
 	"net/http/httptest"
 	"net/url"
 	"strings"
@@ -17,67 +17,23 @@ import (
 	"github.com/cdriehuys/secret-santa/ui"
 )
 
-type TestAppOpt func(a *application.Application)
-
-type CapturingTemplateData struct {
-	Data    application.TemplateData
-	RawData any
-}
-
-func (d *CapturingTemplateData) Render(w io.Writer, page string, data any) error {
-	d.RawData = data
-
-	if templateData, ok := data.(application.TemplateData); ok {
-		d.Data = templateData
+func NewTestApplication(t *testing.T) *application.Application {
+	app := &application.Application{
+		Logger: slog.New(slog.DiscardHandler),
 	}
 
-	fmt.Fprintf(w, "Render for %q captured by %#v", page, d)
-
-	return nil
-}
-
-func CaptureTemplateData() (*CapturingTemplateData, TestAppOpt) {
-	engine := &CapturingTemplateData{}
-
-	opt := func(a *application.Application) {
-		a.Templates = engine
+	// Default to using the embedded file system like production.
+	templateFS, err := fs.Sub(ui.FS, "templates")
+	if err != nil {
+		t.Fatalf("failed to load templates from file system: %v", err)
 	}
 
-	return engine, opt
-}
-
-func WithTemplateEngine(templates application.TemplateEngine) TestAppOpt {
-	return func(a *application.Application) {
-		a.Templates = templates
-	}
-}
-
-func NewTestApplication(t *testing.T, opts ...TestAppOpt) *application.Application {
-	app := &application.Application{}
-
-	// Apply options
-	for _, opt := range opts {
-		opt(app)
+	templates, err := templating.NewTemplateCache(app.Logger, templateFS)
+	if err != nil {
+		t.Fatalf("failed to construct template cache: %v", err)
 	}
 
-	if app.Logger == nil {
-		app.Logger = slog.New(slog.DiscardHandler)
-	}
-
-	if app.Templates == nil {
-		// Default to using the embedded file system like production.
-		templateFS, err := fs.Sub(ui.FS, "templates")
-		if err != nil {
-			t.Fatalf("failed to load templates from file system: %v", err)
-		}
-
-		templates, err := templating.NewTemplateCache(app.Logger, templateFS)
-		if err != nil {
-			t.Fatalf("failed to construct template cache: %v", err)
-		}
-
-		app.Templates = templates
-	}
+	app.Templates = templates
 
 	return app
 }
@@ -88,6 +44,14 @@ type TestServer struct {
 
 func NewTestServer(t *testing.T, h http.Handler) *TestServer {
 	ts := httptest.NewServer(h)
+
+	// CSRF protection depends on persisting cookies.
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		t.Fatalf("failed to create cookie jar: %v", err)
+	}
+
+	ts.Client().Jar = jar
 
 	// Prevent the test server client from following redirects to allow for testing against the
 	// redirect response.
@@ -129,6 +93,7 @@ func (ts *TestServer) PostForm(t *testing.T, path string, form url.Values) TestR
 	req := ts.makeRequest(t, http.MethodPost, path, strings.NewReader(form.Encode()))
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Sec-Fetch-Site", "same-origin")
 
 	return ts.doRequest(t, req)
 }

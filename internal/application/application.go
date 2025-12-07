@@ -9,6 +9,7 @@ import (
 
 	"github.com/cdriehuys/secret-santa/internal/models"
 	"github.com/cdriehuys/secret-santa/internal/pairings"
+	"github.com/justinas/nosurf"
 )
 
 const MaxNames = 100
@@ -27,6 +28,7 @@ type UserModel interface {
 
 type TemplateData struct {
 	IsAuthenticated bool
+	CSRFToken       string
 }
 
 type Application struct {
@@ -38,21 +40,10 @@ type Application struct {
 	Users UserModel
 }
 
-func (s *Application) Routes() http.Handler {
-	mux := http.NewServeMux()
-
-	mux.HandleFunc("GET /{$}", s.homeGet)
-	mux.HandleFunc("GET /pairings", s.pairingsGet)
-	mux.HandleFunc("POST /pairings", s.pairingsPost)
-	mux.HandleFunc("GET /register", s.registerGet)
-	mux.HandleFunc("POST /register", s.registerPost)
-	mux.HandleFunc("GET /register/success", s.registerSuccess)
-
-	return mux
-}
-
 func (a *Application) templateData(r *http.Request) TemplateData {
-	return TemplateData{}
+	return TemplateData{
+		CSRFToken: nosurf.Token(r),
+	}
 }
 
 func (a *Application) serverError(w http.ResponseWriter, r *http.Request, message string, err error, attrs ...any) {
@@ -78,7 +69,7 @@ func (a *Application) pairingsGet(w http.ResponseWriter, r *http.Request) {
 	a.render(w, r, "pairings.html", data)
 }
 
-func (s *Application) pairingsPost(w http.ResponseWriter, r *http.Request) {
+func (a *Application) pairingsPost(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -109,7 +100,7 @@ func (s *Application) pairingsPost(w http.ResponseWriter, r *http.Request) {
 		restrictions[name] = exclusions
 	}
 
-	pairs, err := s.PairingGenerator(restrictions)
+	pairs, err := a.PairingGenerator(restrictions)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

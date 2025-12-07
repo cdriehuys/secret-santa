@@ -1,6 +1,7 @@
 {{ define "content" }}
 <h1>Register</h1>
 <form method="post" action="/register">
+  <input type='hidden' name='csrf_token' value='{{ .CSRFToken }}'>
   <label for="email">Email:</label>
   <input id="email" name="email" type="email" required>
   <br>
